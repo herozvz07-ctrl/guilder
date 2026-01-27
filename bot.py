@@ -23,15 +23,27 @@ from bs4 import BeautifulSoup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Конфигурация
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN")
+# ==================== КОНФИГУРАЦИЯ ====================
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Например: https://your-app.onrender.com
+PORT = int(os.getenv("PORT", 8080))
+
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "0"))
 GUILD_CHAT_ID = int(os.getenv("GUILD_CHAT_ID", "0"))
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
-PORT = int(os.getenv("PORT", "8080"))
 
-# MongoDB
+# Инициализация бота (Версия 3.7+ требует DefaultBotProperties)
+bot = Bot(
+    token=BOT_TOKEN, 
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+router = Router()
+dp.include_router(router)
+
+# Планировщик и БД
+scheduler = AsyncIOScheduler()
 mongo_client = AsyncIOMotorClient(MONGO_URI)
 db = mongo_client.rucoy_guild
 
