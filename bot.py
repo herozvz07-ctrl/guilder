@@ -997,9 +997,6 @@ async def remove_leader(message: Message):
 
 # ==================== WEBHOOK ДЛЯ RENDER ====================
 
-def run_flask():
-    """Запуск Flask в отдельном потоке"""
-    app.run(host="0.0.0.0", port=PORT)
 
 # ==================== ФУНКЦИИ СТАРТАПА ====================
 
