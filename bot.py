@@ -4,11 +4,6 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List
 
-from aiogram import Bot, Dispatcher, Router
-from aiogram.client.default import DefaultBotProperties # Важно для ParseMode
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-from aiohttp import web
-
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -17,14 +12,12 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
+from aiohttp import web
 from motor.motor_asyncio import AsyncIOMotorClient
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from bs4 import BeautifulSoup
-import aiohttp
-
-from flask import Flask, request
-from threading import Thread
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
