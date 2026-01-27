@@ -57,7 +57,10 @@ class ApplicationForm(StatesGroup):
     confirm = State()
 
 # Инициализация бота
-bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+bot = Bot(
+    token=BOT_TOKEN, 
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 router = Router()
