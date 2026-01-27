@@ -4,6 +4,11 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List
 
+from aiogram import Bot, Dispatcher, Router
+from aiogram.client.default import DefaultBotProperties # Важно для ParseMode
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiohttp import web
+
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
