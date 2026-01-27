@@ -1011,35 +1011,60 @@ def run_flask():
     """Запуск Flask в отдельном потоке"""
     app.run(host="0.0.0.0", port=PORT)
 
-# ==================== ЗАПУСК БОТА ====================
+# ==================== ФУНКЦИИ СТАРТАПА ====================
 
-async def on_startup(bot: Bot):
-    # Установка вебхука
-    await bot.set_webhook(f"{WEBHOOK_URL}/{BOT_TOKEN}")
+async def on_startup(dispatcher: Dispatcher, bot: Bot):
+    """Действия при запуске сервера"""
+    logger.info("Запуск процесса Startup...")
     
-    # Запуск планировщика
-    scheduler.add_job(update_guild_data, "interval", minutes=10)
-    scheduler.add_job(check_inactive_members, "interval", hours=12)
-    scheduler.start()
-    logger.info("Бот и планировщик запущены!")
+    # Настройка Webhook
+    if WEBHOOK_URL:
+        webhook_path = f"/{BOT_TOKEN}"
+        url = f"{WEBHOOK_URL}{webhook_path}"
+        await bot.set_webhook(url)
+        logger.info(f"Webhook установлен: {url}")
+    else:
+        logger.warning("WEBHOOK_URL не задан! Бот может не получать сообщения.")
+
+    # Запуск планировщика задач
+    if not scheduler.running:
+        # Добавляем задачи (проверь, что функции update_guild_data и check_inactive_members созданы)
+        scheduler.add_job(update_guild_data, "interval", minutes=10)
+        scheduler.add_job(check_inactive_members, "interval", hours=12)
+        scheduler.start()
+        logger.info("Планировщик задач запущен.")
+
+# ==================== ГЛАВНЫЙ БЛОК ЗАПУСКА ====================
 
 def main():
-    # Создаем aiohttp приложение (замена Flask)
-    app = web.Application()
+    """Точка входа для Render (aiohttp server)"""
     
-    # Хэндлер для вебхука
+    # 1. Создаем веб-приложение
+    app = web.Application()
+
+    # 2. Создаем обработчик запросов от Telegram
     webhook_requests_handler = SimpleRequestHandler(
         dispatcher=dp,
-        bot=bot,
+        bot=bot
     )
+    
+    # 3. Регистрируем путь для вебхука (должен совпадать с URL в set_webhook)
     webhook_requests_handler.register(app, path=f"/{BOT_TOKEN}")
-    
-    # Привязываем бота к приложению
+
+    # 4. Настраиваем связи между приложением, диспетчером и ботом
     setup_application(app, dp, bot=bot)
-    dp.startup.register(on_startup)
     
-    # Запускаем сервер на порту, который дает Render
+    # 5. Регистрируем событие запуска
+    dp.startup.register(on_startup)
+
+    # 6. Запускаем сервер
+    logger.info(f"Сервер запускается на порту {PORT}")
     web.run_app(app, host="0.0.0.0", port=PORT)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Бот остановлен вручную")
+    except Exception as e:
+        logger.error(f"Критическая ошибка при запуске: {e}")
