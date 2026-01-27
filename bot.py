@@ -997,25 +997,6 @@ async def remove_leader(message: Message):
 
 # ==================== WEBHOOK ДЛЯ RENDER ====================
 
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def webhook():
-    """Обработка webhook от Telegram"""
-    if request.headers.get("content-type") == "application/json":
-        json_data = request.get_json()
-        update = dp.feed_update(bot, json_data)
-        asyncio.run(update)
-    return "OK"
-
-@app.route("/")
-def index():
-    """Главная страница (для healthcheck)"""
-    return "Rucoy Guild Bot is running!"
-
-@app.route("/health")
-def health():
-    """Healthcheck endpoint"""
-    return {"status": "ok"}
-
 def run_flask():
     """Запуск Flask в отдельном потоке"""
     app.run(host="0.0.0.0", port=PORT)
