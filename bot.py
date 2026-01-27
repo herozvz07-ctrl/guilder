@@ -1015,45 +1015,33 @@ def run_flask():
 
 # ==================== ЗАПУСК БОТА ====================
 
-async def on_startup():
-    """Действия при запуске"""
-    logger.info("Бот запущен!")
-    
-    # Установка webhook если задан URL
-    if WEBHOOK_URL:
-        webhook_url = f"{WEBHOOK_URL}/{BOT_TOKEN}"
-        await bot.set_webhook(webhook_url)
-        logger.info(f"Webhook установлен: {webhook_url}")
+async def on_startup(bot: Bot):
+    # Установка вебхука
+    await bot.set_webhook(f"{WEBHOOK_URL}/{BOT_TOKEN}")
     
     # Запуск планировщика
     scheduler.add_job(update_guild_data, "interval", minutes=10)
     scheduler.add_job(check_inactive_members, "interval", hours=12)
     scheduler.start()
+    logger.info("Бот и планировщик запущены!")
+
+def main():
+    # Создаем aiohttp приложение (замена Flask)
+    app = web.Application()
     
-    logger.info("Планировщик запущен")
-
-async def on_shutdown():
-    """Действия при остановке"""
-    logger.info("Бот остановлен")
-    await bot.session.close()
-    scheduler.shutdown()
-
-async def main():
-    """Главная функция"""
+    # Хэндлер для вебхука
+    webhook_requests_handler = SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+    )
+    webhook_requests_handler.register(app, path=f"/{BOT_TOKEN}")
+    
+    # Привязываем бота к приложению
+    setup_application(app, dp, bot=bot)
     dp.startup.register(on_startup)
-    dp.shutdown.register(on_shutdown)
     
-    if WEBHOOK_URL:
-        # Запуск Flask в отдельном потоке для webhook
-        Thread(target=run_flask, daemon=True).start()
-        logger.info(f"Flask запущен на порту {PORT}")
-        
-        # Держим бота активным
-        await asyncio.Event().wait()
-    else:
-        # Polling режим
-        await dp.start_polling(bot)
+    # Запускаем сервер на порту, который дает Render
+    web.run_app(app, host="0.0.0.0", port=PORT)
 
 if __name__ == "__main__":
-    asyncio.run(main())
-    
+    main()
