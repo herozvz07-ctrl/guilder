@@ -79,9 +79,6 @@ dp.include_router(router)
 # Планировщик
 scheduler = AsyncIOScheduler()
 
-# Flask для webhook
-app = Flask(__name__)
-
 # ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 
 async def get_user_role(user_id: int) -> str:
