@@ -780,7 +780,6 @@ async def set_guild(message: Message):
     if message.from_user.id != ADMIN_ID:
         await message.answer("❌ У вас нет прав для этой команды")
         return
-    
     args = message.text.split(maxsplit=1)
     if len(args) < 2:
         await message.answer(
