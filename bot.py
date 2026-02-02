@@ -776,8 +776,8 @@ async def vote_no(callback: CallbackQuery):
 
 @router.message(Command("setguild"))
 async def set_guild(message: Message):
-    """Установка гильдии (только для owner/admin)"""
-    if not await is_admin(message.from_user.id):
+    # Прямая проверка: отправитель — это тот, чей ID в конфиге?
+    if message.from_user.id != ADMIN_ID:
         await message.answer("❌ У вас нет прав для этой команды")
         return
     
