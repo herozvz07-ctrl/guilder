@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+import aiohttp
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List
 
@@ -12,12 +13,14 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
 from aiohttp import web
 from motor.motor_asyncio import AsyncIOMotorClient
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -26,34 +29,27 @@ logger = logging.getLogger(__name__)
 # ==================== КОНФИГУРАЦИЯ ====================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Например: https://your-app.onrender.com
 PORT = int(os.getenv("PORT", 8080))
 
+# Твой личный ID как владельца (для /setguild)
+OWNER_ID = int(os.getenv("ADMIN_ID", "0")) 
+# ID админ-чата (куда летят анкеты)
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "0"))
-GUILD_CHAT_ID = int(os.getenv("GUILD_CHAT_ID", "0"))
 
-# Инициализация бота (Версия 3.7+ требует DefaultBotProperties)
-bot = Bot(
-    token=BOT_TOKEN, 
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
+# Инициализация
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 router = Router()
-dp.include_router(router)
 
-# Планировщик и БД
-scheduler = AsyncIOScheduler()
+# БД
 mongo_client = AsyncIOMotorClient(MONGO_URI)
 db = mongo_client.rucoy_guild
-
-# Коллекции
+guild_col = db.guild
 users_col = db.users
 applications_col = db.applications
-guild_col = db.guild
 logs_col = db.logs
 
-# FSM States для анкеты
 class ApplicationForm(StatesGroup):
     screenshot = State()
     game_nick = State()
@@ -65,19 +61,6 @@ class ApplicationForm(StatesGroup):
     ready_lead = State()
     play_time = State()
     confirm = State()
-
-# Инициализация бота
-bot = Bot(
-    token=BOT_TOKEN, 
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
-storage = MemoryStorage()
-dp = Dispatcher(storage=storage)
-router = Router()
-dp.include_router(router)
-
-# Планировщик
-scheduler = AsyncIOScheduler()
 
 # ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 
