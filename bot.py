@@ -776,69 +776,93 @@ async def vote_no(callback: CallbackQuery):
 
 @router.message(Command("setguild"))
 async def set_guild(message: Message):
-    # Прямая проверка: отправитель — это тот, чей ID в конфиге?
+    """Установка гильдии (только для владельца бота)"""
+    
+    # ПРЯМАЯ ПРОВЕРКА ПРАВ (Самая надежная)
     if message.from_user.id != ADMIN_ID:
-        await message.answer("❌ У вас нет прав для этой команды")
+        await message.answer(f"❌ У вас нет прав. Ваш ID: {message.from_user.id}")
         return
+    
     args = message.text.split(maxsplit=1)
     if len(args) < 2:
         await message.answer(
-            "Использование: /setguild <URL гильдии>\n"
-            "Пример: /setguild https://rucoyonline.com/guild/..."
+            "📍 **Инструкция:**\n"
+            "Напишите: `/setguild <URL>`\n\n"
+            "Пример:\n`/setguild https://rucoyonline.com/guild/IOT`",
+            parse_mode="Markdown"
         )
         return
     
     url = args[1].strip()
+    await message.answer("⏳ **Начинаю парсинг...**\nПожалуйста, подождите.")
     
-    await message.answer("⏳ Парсинг страницы гильдии...")
-    
-    guild_data = await parse_guild_page(url)
-    if not guild_data:
-        await message.answer("❌ Не удалось спарсить страницу гильдии. Проверьте URL.")
-        return
-    
-    await guild_col.update_one(
-        {},
-        {"$set": guild_data},
-        upsert=True
-    )
-    
-    await log_action("guild_set", message.from_user.id, details={"url": url})
-    
-    await message.answer(
-        f"✅ Гильдия успешно подключена!\n\n"
-        f"🏰 Название: <b>{guild_data['name']}</b>\n"
-        f"👥 Участников: {len(guild_data['members'])}\n"
-        f"🔗 URL: {url}"
-    )
+    try:
+        # Предполагаем, что функция parse_guild_page уже определена в твоем коде
+        guild_data = await parse_guild_page(url)
+        
+        if not guild_data:
+            await message.answer("❌ Ошибка: Не удалось получить данные с сайта. Проверьте ссылку.")
+            return
+
+        # ПРИВЯЗКА ЧАТА И ТЕМЫ (Чтобы бот знал, куда слать заявки)
+        guild_data["chat_id"] = message.chat.id
+        guild_data["topic_id"] = message.message_thread_id if message.is_topic_message else None
+        guild_data["updated_at"] = datetime.now()
+
+        # Сохранение в MongoDB (guild_col должна быть определена ранее)
+        await guild_col.update_one(
+            {}, 
+            {"$set": guild_data}, 
+            upsert=True
+        )
+        
+        await log_action("guild_set", message.from_user.id, details={"url": url, "name": guild_data.get('name')})
+        
+        await message.answer(
+            f"✅ **ГИЛЬДИЯ ПОДКЛЮЧЕНА!**\n\n"
+            f"🏰 Название: <b>{guild_data['name']}</b>\n"
+            f"👥 Участников: {len(guild_data['members'])}\n"
+            f"📍 Привязано к чату: <code>{message.chat.id}</code>\n"
+            f"🔗 URL: {url}",
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        await message.answer(f"❌ Произошла техническая ошибка: {e}")
 
 @router.callback_query(F.data == "guild_info")
 async def show_guild_info(callback: CallbackQuery):
-    """Информация о гильдии"""
+    """Информация о текущей гильдии из базы данных"""
     guild_data = await guild_col.find_one()
     
     if not guild_data:
-        await callback.answer("❌ Гильдия не настроена", show_alert=True)
+        await callback.answer("⚠️ Гильдия еще не настроена админом.", show_alert=True)
         return
     
     members = guild_data.get("members", [])
-    total_level = sum(m["level"] for m in members)
+    total_level = sum(m.get("level", 0) for m in members)
     avg_level = total_level // len(members) if members else 0
-    leaders = [m for m in members if m.get("is_leader")]
     
+    # Считаем неактивных (если есть поле last_seen)
     inactive_threshold = datetime.now() - timedelta(days=7)
-    inactive = [m for m in members if m.get("last_seen", datetime.now()) < inactive_threshold]
+    inactive_count = 0
+    for m in members:
+        ls = m.get("last_seen")
+        if ls and isinstance(ls, datetime) and ls < inactive_threshold:
+            inactive_count += 1
     
     text = (
-        f"🏰 <b>{guild_data['name']}</b>\n\n"
-        f"👥 Участников: {len(members)}\n"
-        f"📊 Суммарный уровень: {total_level}\n"
-        f"📈 Средний уровень: {avg_level}\n"
-        f"👑 Лидеров: {len(leaders)}\n"
-        f"🟡 Неактивных (>7 дней): {len(inactive)}\n"
+        f"🏰 <b>ИНФОРМАЦИЯ О ГИЛЬДИИ: {guild_data['name']}</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"👥 Участников: <b>{len(members)}</b>\n"
+        f"📊 Суммарный lvl: <b>{total_level}</b>\n"
+        f"📈 Средний lvl: <b>{avg_level}</b>\n"
+        f"🟡 Неактив (>7дн): <b>{inactive_count}</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🕒 Последнее обновление: {guild_data.get('updated_at', 'Неизвестно').strftime('%H:%M %d.%m')}"
     )
     
-    await callback.message.edit_text(text, reply_markup=get_main_keyboard())
+    # get_main_keyboard — твоя функция клавиатуры
+    await callback.message.edit_text(text, reply_markup=get_main_keyboard(), parse_mode="HTML")
     await callback.answer()
 
 @router.callback_query(F.data == "guild_members")
