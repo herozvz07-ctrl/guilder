@@ -697,7 +697,7 @@ async def show_guild_info(callback: CallbackQuery):
         f"👥 Участников: <b>{len(members)}</b>\n"
         f"📊 Суммарный lvl: <b>{total_level}</b>\n"
         f"📈 Средний lvl: <b>{avg_level}</b>\n"
-        f"🟡 Неактив (>7дн): <b>{inactive_count}</b>\n"
+        f"🟡 Неактив : <b>{inactive_count}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"🕒 Последнее обновление: {last_update_str}"
     )
