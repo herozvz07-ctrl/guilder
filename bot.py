@@ -176,6 +176,21 @@ async def parse_guild_page(url: str) -> Optional[Dict]:
         logger.error(f"Ошибка парсинга RucoyStats: {e}")
         return None
 
+async def update_guild_data():
+    """Функция автоматического обновления данных гильдии"""
+    try:
+        guild_data = await guild_col.find_one()
+        if not guild_data or "url" not in guild_data:
+            logger.info("Обновление пропущено: гильдия не настроена.")
+            return
+            
+        new_data = await parse_guild_page(guild_data["url"])
+        if new_data:
+            await guild_col.update_one({}, {"$set": new_data})
+            logger.info(f"Данные гильдии {new_data['name']} обновлены.")
+    except Exception as e:
+        logger.error(f"Ошибка в update_guild_data: {e}")
+
 # ==================== ОБРАБОТЧИКИ КОМАНД ====================
 
 @router.message(Command("start"))
