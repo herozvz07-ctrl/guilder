@@ -249,12 +249,16 @@ async def cmd_setguild(message: Message):
         upsert=True
     )
     
-    await log_action("guild_set", message.from_user.id, details={"url": url})
     await message.answer(
-        f"✅ Гильдия установлена!\n\n"
-        f"🏰 <b>{data['name']}</b>\n"
-        f"👥 Участников: {len(data['members'])}"
+        f"✅ <b>Гильдия успешно подключена!</b>\n\n"
+        f"🏰 Название: <b>{guild_data['name']}</b>\n"
+        f"👑 Лидер: <code>{guild_data.get('leader', 'Не найден')}</code>\n"
+        f"👥 Участников: <b>{len(guild_data['members'])}</b>\n"
+        f"📈 Средний уровень: <b>{guild_data['avg_lvl']}</b>\n"
+        f"🔗 <a href='{url}'>Открыть на RucoyStats</a>",
+        disable_web_page_preview=True
     )
+
 
 @router.message(Command("makeadmin"))
 async def cmd_makeadmin(message: Message):
